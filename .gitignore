@@ -1,0 +1,44 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+
+# Android Studio
+.idea/
+*.iml
+.gradle/
+.kotlin/
+build/
+**/build/
+local.properties
+
+# Arquivos temporarios
+*.log
+*.tmp
+.DS_Store
+
+# Credenciais
+.env
+.env.*
+!*.example
+*.jks
+*.keystore
+secrets.properties
+
+# Arquivos locais
+captures/
+.externalNativeBuild/
+.cxx/
+
