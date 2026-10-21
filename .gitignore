@@ -15,7 +15,7 @@
 local.properties
 
 
-# Android Studio
+
 .idea/
 *.iml
 .gradle/
@@ -24,12 +24,12 @@ build/
 **/build/
 local.properties
 
-# Arquivos temporarios
+
 *.log
 *.tmp
 .DS_Store
 
-# Credenciais
+
 .env
 .env.*
 !*.example
@@ -37,7 +37,7 @@ local.properties
 *.keystore
 secrets.properties
 
-# Arquivos locais
+
 captures/
 .externalNativeBuild/
 .cxx/
