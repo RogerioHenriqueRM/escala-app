@@ -20,6 +20,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.text.input.KeyboardType
+import com.escalarelatorio.app.model.ParticipanteEscala
 
 
 class MainActivity : ComponentActivity() {
@@ -457,13 +458,4 @@ fun TelaNovaEscala(voltar: () -> Unit) {
     }
 }
 
-
-data class ParticipanteEscala(
-    val nome: String = "",
-    val funcao: String = "",
-    val data: String = "",
-    val inicio: String = "",
-    val fim: String = "",
-    val observacoes: String = ""
-)
 
