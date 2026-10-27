@@ -11,6 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 import com.escalarelatorio.app.model.ParticipanteEscala
+import com.escalarelatorio.app.model.ValidadorEscala
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +27,9 @@ fun TelaNovaEscala(voltar: () -> Unit) {
 
     var menuAberto by remember { mutableStateOf(false) }
     var mostrarResumo by remember { mutableStateOf(false) }
+    var mensagemErro by remember {
+        mutableStateOf<String?>(null)
+    }
 
     val tipos = listOf(
         "Trabalho",
@@ -104,21 +108,37 @@ fun TelaNovaEscala(voltar: () -> Unit) {
             }
         }
 
-        OutlinedTextField(
+        /*OutlinedTextField(
             value = dataInicial,
             onValueChange = { dataInicial = it },
             label = { Text("Data inicial (DD/MM/AAAA)") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
+        ) */
+
+
+        SeletorData(
+            titulo = "Data inicial",
+            valor = dataInicial,
+            aoSelecionar = { dataInicial = it }
         )
 
-        OutlinedTextField(
+
+       /* OutlinedTextField(
             value = dataFinal,
             onValueChange = { dataFinal = it },
             label = { Text("Data final (DD/MM/AAAA)") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
+        ) */
+
+
+        SeletorData(
+            titulo = "Data final",
+            valor = dataFinal,
+            aoSelecionar = { dataFinal = it }
         )
+
 
         OutlinedTextField(
             value = local,
@@ -196,7 +216,7 @@ fun TelaNovaEscala(voltar: () -> Unit) {
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    OutlinedTextField(
+                   /* OutlinedTextField(
                         value = participante.data,
                         onValueChange = {
                             participantes[indice] =
@@ -204,9 +224,20 @@ fun TelaNovaEscala(voltar: () -> Unit) {
                         },
                         label = { Text("Data (DD/MM/AAAA)") },
                         modifier = Modifier.fillMaxWidth()
+                    ) */
+
+
+                    SeletorData(
+                        titulo = "Data do participante",
+                        valor = participante.data,
+                        aoSelecionar = { novaData ->
+                            participantes[indice] =
+                                participante.copy(data = novaData)
+                        }
                     )
 
-                    Row(
+
+                   /* Row(
                         horizontalArrangement =
                             Arrangement.spacedBy(8.dp)
                     ) {
@@ -234,7 +265,34 @@ fun TelaNovaEscala(voltar: () -> Unit) {
                             modifier = Modifier.weight(1f),
                             singleLine = true
                         )
+                    } */
+
+// ajuste: removendo data strng do mvp para classes do compose
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        SeletorHorario(
+                            titulo = "Início",
+                            valor = participante.inicio,
+                            aoSelecionar = { novoHorario ->
+                                participantes[indice] =
+                                    participante.copy(inicio = novoHorario)
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        SeletorHorario(
+                            titulo = "Fim",
+                            valor = participante.fim,
+                            aoSelecionar = { novoHorario ->
+                                participantes[indice] =
+                                    participante.copy(fim = novoHorario)
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
+
 
                     OutlinedTextField(
                         value = participante.observacoes,
@@ -266,16 +324,37 @@ fun TelaNovaEscala(voltar: () -> Unit) {
             minLines = 3
         )
 
+
         Button(
             onClick = {
-                mostrarResumo = true
+                val erro = ValidadorEscala.validar(
+                    titulo = titulo,
+                    dataInicial = dataInicial,
+                    dataFinal = dataFinal,
+                    local = local,
+                    responsavel = responsavel,
+                    participantes = participantes
+                )
+
+                if (erro == null) {
+                    mensagemErro = null
+                    mostrarResumo = true
+                } else {
+                    mensagemErro = erro
+                }
             },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = titulo.isNotBlank() &&
-                    participantes.any { it.nome.isNotBlank() }
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text("Pré-visualizar Escala")
         }
+
+        mensagemErro?.let { erro ->
+            Text(
+                text = erro,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
     }
 
     if (mostrarResumo) {
