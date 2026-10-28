@@ -9,13 +9,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import com.escalarelatorio.app.database.EscalaDatabase
+import com.escalarelatorio.app.database.EscalaEntity
+import com.escalarelatorio.app.database.ParticipanteEntity
+import kotlinx.coroutines.launch
 import com.escalarelatorio.app.model.ParticipanteEscala
 import com.escalarelatorio.app.model.ValidadorEscala
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TelaNovaEscala(voltar: () -> Unit) {
+
+
+    val context = LocalContext.current
+
+    val escalaDao = remember(context) {
+        EscalaDatabase.obterBanco(context).escalaDao()
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    var salvando by remember {
+        mutableStateOf(false)
+    }
+
+    var erroSalvamento by remember {
+        mutableStateOf<String?>(null)
+    }
+
 
     var titulo by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf("Trabalho") }
@@ -354,6 +377,83 @@ fun TelaNovaEscala(voltar: () -> Unit) {
                 color = MaterialTheme.colorScheme.error
             )
         }
+
+
+        Button(
+            onClick = {
+
+                val erro = ValidadorEscala.validar(
+                    titulo = titulo,
+                    dataInicial = dataInicial,
+                    dataFinal = dataFinal,
+                    local = local,
+                    responsavel = responsavel,
+                    participantes = participantes
+                )
+
+                if (erro != null) {
+                    erroSalvamento = erro
+                } else {
+                    salvando = true
+                    erroSalvamento = null
+
+                    val novaEscala = EscalaEntity(
+                        titulo = titulo.trim(),
+                        tipo = tipo,
+                        dataInicial = dataInicial,
+                        dataFinal = dataFinal,
+                        local = local.trim(),
+                        responsavel = responsavel.trim(),
+                        observacoes = observacoes.trim()
+                    )
+
+                    val novosParticipantes = participantes.map {
+                        ParticipanteEntity(
+                            escalaId = 0,
+                            nome = it.nome.trim(),
+                            funcao = it.funcao.trim(),
+                            data = it.data,
+                            inicio = it.inicio,
+                            fim = it.fim,
+                            observacoes = it.observacoes.trim()
+                        )
+                    }
+
+                    coroutineScope.launch {
+                        try {
+                            escalaDao.salvarEscalaCompleta(
+                                novaEscala,
+                                novosParticipantes
+                            )
+
+                            voltar()
+
+                        } catch (e: Exception) {
+                            erroSalvamento =
+                                "Não foi possível salvar a escala: " +
+                                        (e.localizedMessage ?: "Erro desconhecido")
+                        } finally {
+                            salvando = false
+                        }
+                    }
+                }
+            },
+            enabled = !salvando,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                if (salvando) "Salvando..."
+                else "Salvar Escala"
+            )
+        }
+
+        erroSalvamento?.let { mensagem ->
+            Text(
+                text = mensagem,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
 
     }
 
