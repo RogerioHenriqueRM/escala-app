@@ -53,4 +53,56 @@ interface EscalaDao {
 
         return escalaId
     }
+
+
+    @Query("DELETE FROM participantes WHERE escalaId = :escalaId")
+    suspend fun removerParticipantesDaEscala(escalaId: Long)
+
+    @Transaction
+    suspend fun atualizarEscalaCompleta(
+        escala: EscalaEntity,
+        participantes: List<ParticipanteEntity>
+    ) {
+        atualizarEscala(escala)
+
+        removerParticipantesDaEscala(escala.id)
+
+        inserirParticipantes(
+            participantes.map {
+                it.copy(
+                    id = 0,
+                    escalaId = escala.id
+                )
+            }
+        )
+    }
+
+    @Transaction
+    suspend fun duplicarEscala(escalaId: Long): Long {
+        val original = buscarEscala(escalaId)
+            ?: error("Escala não encontrada")
+
+        val participantesOriginais =
+            buscarParticipantes(escalaId)
+
+        val novaEscalaId = inserirEscala(
+            original.copy(
+                id = 0,
+                titulo = "${original.titulo} (Cópia)",
+                criadoEm = System.currentTimeMillis()
+            )
+        )
+
+        inserirParticipantes(
+            participantesOriginais.map {
+                it.copy(
+                    id = 0,
+                    escalaId = novaEscalaId
+                )
+            }
+        )
+
+        return novaEscalaId
+    }
+
 }

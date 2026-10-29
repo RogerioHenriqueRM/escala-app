@@ -17,10 +17,11 @@ import com.escalarelatorio.app.database.ParticipanteEntity
 import kotlinx.coroutines.launch
 import com.escalarelatorio.app.model.ParticipanteEscala
 import com.escalarelatorio.app.model.ValidadorEscala
+import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TelaNovaEscala(voltar: () -> Unit) {
+fun TelaNovaEscala(voltar: () -> Unit, escalaId: Long? = null) {
 
 
     val context = LocalContext.current
@@ -67,6 +68,60 @@ fun TelaNovaEscala(voltar: () -> Unit) {
         mutableStateListOf(ParticipanteEscala())
     }
 
+
+    var carregandoEdicao by remember(escalaId) {
+        mutableStateOf(escalaId != null)
+    }
+
+    var criadoEmOriginal by remember {
+        mutableLongStateOf(System.currentTimeMillis())
+    }
+
+    LaunchedEffect(escalaId) {
+        if (escalaId != null) {
+            carregandoEdicao = true
+
+
+
+            try {
+                val registro = escalaDao.buscarEscala(escalaId)
+                    ?: error("Escala não encontrada")
+
+                val itens = escalaDao.buscarParticipantes(escalaId)
+
+                titulo = registro.titulo
+                tipo = registro.tipo
+                dataInicial = registro.dataInicial
+                dataFinal = registro.dataFinal
+                local = registro.local
+                responsavel = registro.responsavel
+                observacoes = registro.observacoes
+                criadoEmOriginal = registro.criadoEm
+
+                participantes.clear()
+                participantes.addAll(
+                    itens.map {
+                        ParticipanteEscala(
+                            nome = it.nome,
+                            funcao = it.funcao,
+                            data = it.data,
+                            inicio = it.inicio,
+                            fim = it.fim,
+                            observacoes = it.observacoes
+                        )
+                    }
+                )
+            } catch (e: Exception) {
+                erroSalvamento = e.localizedMessage
+                    ?: "Erro ao carregar escala"
+            } finally {
+                carregandoEdicao = false
+            }
+        }
+
+    }
+
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -80,7 +135,7 @@ fun TelaNovaEscala(voltar: () -> Unit) {
         }
 
         Text(
-            text = "Nova Escala",
+            if (escalaId == null) "Nova Escala" else "Editar Escala",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
@@ -404,7 +459,8 @@ fun TelaNovaEscala(voltar: () -> Unit) {
                         dataFinal = dataFinal,
                         local = local.trim(),
                         responsavel = responsavel.trim(),
-                        observacoes = observacoes.trim()
+                        observacoes = observacoes.trim(),
+                        criadoEm = criadoEmOriginal
                     )
 
                     val novosParticipantes = participantes.map {
@@ -421,10 +477,17 @@ fun TelaNovaEscala(voltar: () -> Unit) {
 
                     coroutineScope.launch {
                         try {
-                            escalaDao.salvarEscalaCompleta(
-                                novaEscala,
-                                novosParticipantes
-                            )
+                            if (escalaId == null){
+                                escalaDao.salvarEscalaCompleta(
+                                    novaEscala,
+                                    novosParticipantes
+                                )
+                            } else {
+                                escalaDao.atualizarEscalaCompleta(
+                                    novaEscala.copy(id = escalaId),
+                                    novosParticipantes
+                                )
+                            }
 
                             voltar()
 
