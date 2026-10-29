@@ -3,6 +3,7 @@ package com.escalarelatorio.app.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,8 +16,9 @@ import androidx.compose.ui.unit.dp
 import com.escalarelatorio.app.database.EscalaDatabase
 import com.escalarelatorio.app.database.EscalaEntity
 
+
 @Composable
-fun TelaInicial(novaEscala: () -> Unit) {
+fun TelaInicial(novaEscala: () -> Unit, abrirEscala: (Long) -> Unit) {
 
     val context = LocalContext.current
 
@@ -112,7 +114,10 @@ fun TelaInicial(novaEscala: () -> Unit) {
                         key = { it.id }
                     ) { escala ->
 
-                        CardEscala(escala)
+                        CardEscala(
+                            escala = escala,
+                            aoClicar = {abrirEscala(escala.id)}
+                        )
                     }
                 }
             }
@@ -121,9 +126,13 @@ fun TelaInicial(novaEscala: () -> Unit) {
 }
 
 @Composable
-fun CardEscala(escala: EscalaEntity) {
+fun CardEscala(
+    escala: EscalaEntity,
+    aoClicar: () -> Unit
+) {
 
     Card(
+        aoClicar,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp)
     ) {

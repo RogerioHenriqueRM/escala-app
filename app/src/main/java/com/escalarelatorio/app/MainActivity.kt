@@ -7,11 +7,15 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.escalarelatorio.app.ui.screens.TelaDetalhesEscala
+import com.escalarelatorio.app.ui.screens.TelaEdicaoEscala
 import com.escalarelatorio.app.ui.screens.TelaInicial
 import com.escalarelatorio.app.ui.screens.TelaNovaEscala
+import androidx.activity.compose.BackHandler
 
 class MainActivity : ComponentActivity() {
 
@@ -26,24 +30,75 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
+
 @Composable
 fun EscalaApp() {
 
-    var mostrarFormulario by remember {
-        mutableStateOf(false)
+    var telaAtual by remember {
+        mutableStateOf("inicio")
     }
 
-    if (mostrarFormulario) {
-        TelaNovaEscala(
-            voltar = { mostrarFormulario = false }
-        )
-    } else {
-        TelaInicial(
-            novaEscala = { mostrarFormulario = true }
-        )
+    var escalaSelecionadaId by remember {
+        mutableLongStateOf(0L)
+    }
+
+
+    BackHandler(enabled = telaAtual != "inicio") {
+        telaAtual = when (telaAtual) {
+            "formulario" -> "inicio"
+            "detalhes" -> "inicio"
+            "edicao" -> "detalhes"
+            else -> "inicio"
+        }
+    }
+
+
+    when (telaAtual) {
+
+        "inicio" -> {
+            TelaInicial(
+                novaEscala = {
+                    telaAtual = "formulario"
+                },
+                abrirEscala = { id ->
+                    escalaSelecionadaId = id
+                    telaAtual = "detalhes"
+                }
+            )
+        }
+
+        "formulario" -> {
+            TelaNovaEscala(
+                voltar = {
+                    telaAtual = "inicio"
+                }
+            )
+        }
+
+        "detalhes" -> {
+            TelaDetalhesEscala(
+                escalaId = escalaSelecionadaId,
+                voltar = {
+                    telaAtual = "inicio"
+                },
+                editar = { id ->
+                    escalaSelecionadaId = id
+                    telaAtual = "edicao"
+                }
+            )
+        }
+
+        "edicao" -> {
+            TelaEdicaoEscala(
+                escalaId = escalaSelecionadaId,
+                voltar = {
+                    telaAtual = "detalhes"
+                },
+                concluido = {
+                    telaAtual = "inicio"
+                }
+            )
+        }
     }
 }
-
-
-
-
