@@ -21,7 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TelaNovaEscala(voltar: () -> Unit, escalaId: Long? = null) {
+fun TelaNovaEscala(voltar: () -> Unit, escalaId: Long? = null, aoSalvar: () -> Unit = voltar) {
 
 
     val context = LocalContext.current
@@ -489,7 +489,7 @@ fun TelaNovaEscala(voltar: () -> Unit, escalaId: Long? = null) {
                                 )
                             }
 
-                            voltar()
+                            aoSalvar()
 
                         } catch (e: Exception) {
                             erroSalvamento =

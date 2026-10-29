@@ -10,6 +10,7 @@ fun TelaEdicaoEscala(
 ) {
     TelaNovaEscala(
         escalaId = escalaId,
-        voltar = concluido
+        voltar = voltar,
+        aoSalvar = concluido
     )
 }

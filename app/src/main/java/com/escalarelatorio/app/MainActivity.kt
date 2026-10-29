@@ -15,6 +15,7 @@ import com.escalarelatorio.app.ui.screens.TelaDetalhesEscala
 import com.escalarelatorio.app.ui.screens.TelaEdicaoEscala
 import com.escalarelatorio.app.ui.screens.TelaInicial
 import com.escalarelatorio.app.ui.screens.TelaNovaEscala
+import androidx.activity.compose.BackHandler
 
 class MainActivity : ComponentActivity() {
 
@@ -41,6 +42,17 @@ fun EscalaApp() {
     var escalaSelecionadaId by remember {
         mutableLongStateOf(0L)
     }
+
+
+    BackHandler(enabled = telaAtual != "inicio") {
+        telaAtual = when (telaAtual) {
+            "formulario" -> "inicio"
+            "detalhes" -> "inicio"
+            "edicao" -> "detalhes"
+            else -> "inicio"
+        }
+    }
+
 
     when (telaAtual) {
 
