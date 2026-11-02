@@ -13,6 +13,11 @@ import com.escalarelatorio.app.database.EscalaDatabase
 import com.escalarelatorio.app.database.EscalaEntity
 import com.escalarelatorio.app.database.ParticipanteEntity
 import kotlinx.coroutines.launch
+import com.escalarelatorio.app.utils.GeradorImagemEscala
+import com.escalarelatorio.app.utils.CompartilharEscala
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 
 @Composable
 fun TelaDetalhesEscala(
@@ -38,6 +43,9 @@ fun TelaDetalhesEscala(
     var processando by remember { mutableStateOf(false) }
     var confirmarExclusao by remember { mutableStateOf(false) }
     var erro by remember { mutableStateOf<String?>(null) }
+    var gerandoImagem by remember {
+        mutableStateOf(false)
+    }
 
     LaunchedEffect(escalaId) {
         try {
@@ -124,6 +132,49 @@ fun TelaDetalhesEscala(
                         }
                     }
                 }
+
+
+                Button(
+                    onClick = {
+                        gerandoImagem = true
+                        erro = null
+
+                        scope.launch {
+                            try {
+                                val arquivo = withContext(Dispatchers.IO) {
+                                    GeradorImagemEscala.gerar(
+                                        context = context,
+                                        escala = registro,
+                                        participantes = participantes
+                                    )
+                                }
+
+                                CompartilharEscala.compartilhar(
+                                    context = context,
+                                    arquivo = arquivo,
+                                    titulo = registro.titulo
+                                )
+
+                            } catch (e: Exception) {
+                                erro = "Erro ao compartilhar: " +
+                                        (e.localizedMessage ?: "Erro desconhecido")
+                            } finally {
+                                gerandoImagem = false
+                            }
+                        }
+                    },
+                    enabled = !processando && !gerandoImagem,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (gerandoImagem) {
+                            "Gerando imagem..."
+                        } else {
+                            "Compartilhar no WhatsApp"
+                        }
+                    )
+                }
+
 
                 Button(
                     onClick = { editar(escalaId) },
