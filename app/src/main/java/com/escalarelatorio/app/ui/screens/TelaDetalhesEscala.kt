@@ -17,7 +17,7 @@ import com.escalarelatorio.app.utils.GeradorImagemEscala
 import com.escalarelatorio.app.utils.CompartilharEscala
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
+import java.io.File
 
 @Composable
 fun TelaDetalhesEscala(
@@ -46,6 +46,15 @@ fun TelaDetalhesEscala(
     var gerandoImagem by remember {
         mutableStateOf(false)
     }
+
+    var arquivoPreview by remember {
+        mutableStateOf<File?>(null)
+    }
+
+    var mostrarPreview by remember {
+        mutableStateOf(false)
+    }
+
 
     LaunchedEffect(escalaId) {
         try {
@@ -149,11 +158,8 @@ fun TelaDetalhesEscala(
                                     )
                                 }
 
-                                CompartilharEscala.compartilhar(
-                                    context = context,
-                                    arquivo = arquivo,
-                                    titulo = registro.titulo
-                                )
+                                arquivoPreview = arquivo
+                                mostrarPreview = true
 
                             } catch (e: Exception) {
                                 erro = "Erro ao compartilhar: " +
@@ -277,4 +283,37 @@ fun TelaDetalhesEscala(
             }
         )
     }
+
+
+    val arquivoAtual = arquivoPreview
+
+    if (mostrarPreview && arquivoAtual != null) {
+
+        DialogPreviewEscala(
+            arquivo = arquivoAtual,
+
+            aoFechar = {
+                mostrarPreview = false
+                arquivoPreview = null
+            },
+
+            aoCompartilhar = {
+                try {
+                    CompartilharEscala.compartilhar(
+                        context = context,
+                        arquivo = arquivoAtual,
+                        titulo = escala?.titulo ?: "Escala"
+                    )
+
+                    mostrarPreview = false
+                    arquivoPreview = null
+
+                } catch (e: Exception) {
+                    erro = e.localizedMessage
+                        ?: "Erro ao compartilhar imagem"
+                }
+            }
+        )
+    }
+
 }
