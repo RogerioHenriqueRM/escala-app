@@ -7,11 +7,99 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
 import com.escalarelatorio.app.database.EscalaEntity
 import com.escalarelatorio.app.database.ParticipanteEntity
 import java.io.File
 
 object GeradorImagemEscala {
+
+    private const val LARGURA = 1080
+    private const val MARGEM = 48
+    private const val ESPACO = 18
+    private const val ALTURA_MAXIMA = 12000
+
+    private val AZUL = Color.rgb(23, 62, 114)
+    private val TEXTO = Color.rgb(37, 53, 74)
+    private val CINZA = Color.rgb(104, 120, 140)
+    private val FUNDO = Color.rgb(245, 248, 252)
+    private val BRANCO = Color.WHITE
+
+    private fun layoutTexto(
+        texto: String,
+        largura: Int,
+        tamanho: Float,
+        cor: Int,
+        negrito: Boolean = false
+    ): StaticLayout {
+
+        val paint = TextPaint(
+            Paint.ANTI_ALIAS_FLAG
+        ).apply {
+            color = cor
+            textSize = tamanho
+            typeface = if (negrito) {
+                Typeface.DEFAULT_BOLD
+            } else {
+                Typeface.DEFAULT
+            }
+        }
+
+        return StaticLayout.Builder.obtain(
+            texto.ifEmpty { "—" },
+            0,
+            texto.ifEmpty { "—" }.length,
+            paint,
+            largura
+        )
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+            .setIncludePad(false)
+            .build()
+    }
+
+    private fun desenharTexto(
+        canvas: Canvas,
+        texto: String,
+        x: Float,
+        y: Float,
+        largura: Int,
+        tamanho: Float,
+        cor: Int,
+        negrito: Boolean = false
+    ): Float {
+
+        val layout = layoutTexto(
+            texto,
+            largura,
+            tamanho,
+            cor,
+            negrito
+        )
+
+        canvas.save()
+        canvas.translate(x, y)
+        layout.draw(canvas)
+        canvas.restore()
+
+        return y + layout.height
+    }
+
+    private fun alturaTexto(
+        texto: String,
+        largura: Int,
+        tamanho: Float,
+        negrito: Boolean = false
+    ): Int {
+        return layoutTexto(
+            texto,
+            largura,
+            tamanho,
+            TEXTO,
+            negrito
+        ).height
+    }
 
     fun gerar(
         context: Context,
@@ -19,208 +107,329 @@ object GeradorImagemEscala {
         participantes: List<ParticipanteEntity>
     ): File {
 
-        val largura = 1080
-        val margem = 54f
-        val larguraTexto = largura - margem * 2
+        val larguraUtil = LARGURA - 2 * MARGEM
+        val larguraCard = larguraUtil
+        val larguraInterna = larguraCard - 48
 
-        val azul = Color.rgb(29, 79, 145)
-        val cinza = Color.rgb(85, 100, 120)
-
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = 34f
-            color = Color.BLACK
-        }
-
-        data class Linha(
-            val texto: String,
-            val tamanho: Float,
-            val cor: Int,
-            val negrito: Boolean,
-            val altura: Float
+        val registros = participantes.sortedWith(
+            compareBy<ParticipanteEntity>(
+                { dataOrdenavel(it.data) },
+                { it.inicio },
+                { it.nome }
+            )
         )
 
-        val linhas = mutableListOf<Linha>()
+        // Calcular altura antes de criar o Bitmap.
+        val alturaCabecalho = 270
 
-        fun adicionar(
-            texto: String,
-            tamanho: Float = 34f,
-            cor: Int = Color.BLACK,
-            negrito: Boolean = false,
-            espacamento: Float = 12f
-        ) {
-            paint.textSize = tamanho
-            paint.typeface = if (negrito) {
-                Typeface.DEFAULT_BOLD
+        val alturaMetadados =
+            40 +
+                    alturaTexto(escala.local, larguraUtil, 30f) +
+                    alturaTexto(escala.responsavel, larguraUtil, 30f) +
+                    150
+
+        val alturasCards = registros.map { pessoa ->
+
+            val linhaNome = alturaTexto(
+                pessoa.nome,
+                larguraInterna,
+                37f,
+                true
+            )
+
+            val linhaFuncao = alturaTexto(
+                pessoa.funcao.ifBlank { "Não informada" },
+                larguraInterna,
+                29f
+            )
+
+            val linhaData = alturaTexto(
+                "${pessoa.data}  |  ${pessoa.inicio} - ${pessoa.fim}",
+                larguraInterna,
+                29f
+            )
+
+            val linhaObs = if (pessoa.observacoes.isBlank()) {
+                0
             } else {
-                Typeface.DEFAULT
+                alturaTexto(
+                    "Obs.: ${pessoa.observacoes}",
+                    larguraInterna,
+                    27f
+                ) + 14
             }
 
-            val alturaLinha = tamanho * 1.35f
-
-            for (paragrafo in texto.split("\n")) {
-                var restante = paragrafo.trim()
-
-                if (restante.isEmpty()) {
-                    linhas.add(
-                        Linha("", tamanho, cor, negrito, alturaLinha)
-                    )
-                    continue
-                }
-
-                while (restante.isNotEmpty()) {
-                    var quantidade = paint.breakText(
-                        restante,
-                        true,
-                        larguraTexto,
-                        null
-                    )
-
-                    if (quantidade <= 0) quantidade = 1
-
-                    if (quantidade < restante.length) {
-                        val espaco = restante
-                            .substring(0, quantidade)
-                            .lastIndexOf(' ')
-
-                        if (espaco > 0) quantidade = espaco
-                    }
-
-                    val trecho = restante
-                        .substring(0, quantidade)
-                        .trim()
-
-                    linhas.add(
-                        Linha(
-                            trecho,
-                            tamanho,
-                            cor,
-                            negrito,
-                            alturaLinha
-                        )
-                    )
-
-                    restante = restante
-                        .substring(quantidade)
-                        .trimStart()
-                }
-            }
-
-            linhas.add(
-                Linha("", tamanho, cor, false, espacamento)
-            )
+            48 + linhaNome + 10 +
+                    linhaFuncao + 10 +
+                    linhaData + linhaObs + 28
         }
 
-        adicionar(
-            escala.titulo.uppercase(),
-            52f,
-            azul,
-            true,
-            24f
-        )
-
-        adicionar("Tipo: ${escala.tipo}", 30f, cinza)
-        adicionar(
-            "Período: ${escala.dataInicial} até ${escala.dataFinal}",
-            30f
-        )
-        adicionar("Local: ${escala.local}", 30f)
-        adicionar("Responsável: ${escala.responsavel}", 30f)
-
-        adicionar(
-            "PARTICIPANTES (${participantes.size})",
-            39f,
-            azul,
-            true,
-            18f
-        )
-
-        participantes.forEachIndexed { indice, pessoa ->
-            adicionar(
-                "${indice + 1}. ${pessoa.nome}",
-                36f,
-                azul,
-                true,
-                8f
-            )
-            adicionar("Função: ${pessoa.funcao}", 30f)
-            adicionar("Data: ${pessoa.data}", 30f)
-            adicionar(
-                "Horário: ${pessoa.inicio} - ${pessoa.fim}",
-                30f
-            )
-
-            if (pessoa.observacoes.isNotBlank()) {
-                adicionar(
-                    "Observações: ${pessoa.observacoes}",
-                    28f,
-                    cinza
+        val alturaObservacoes =
+            if (escala.observacoes.isBlank()) {
+                0
+            } else {
+                70 + alturaTexto(
+                    escala.observacoes,
+                    larguraUtil,
+                    29f
                 )
             }
-         }
 
-        if (escala.observacoes.isNotBlank()) {
-            adicionar("OBSERVAÇÕES GERAIS", 36f, azul, true)
-            adicionar(escala.observacoes, 30f)
+        val alturaTotal =
+            alturaCabecalho +
+                    alturaMetadados +
+                    90 +
+                    alturasCards.sum() +
+                    registros.size * ESPACO +
+                    alturaObservacoes +
+                    140
+
+        require(alturaTotal <= ALTURA_MAXIMA) {
+            "Escala muito longa para uma única imagem. " +
+                    "Divida os participantes em escalas menores."
         }
 
-        adicionar(
-            "Gerado pelo EscalaApp",
-            25f,
-            cinza
-        )
-
-        val altura = (
-                linhas.sumOf { it.altura.toDouble() }
-                        + margem * 2
-                        + 30
-                ).toInt().coerceAtLeast(600)
-
         val bitmap = Bitmap.createBitmap(
-            largura,
-            altura,
+            LARGURA,
+            alturaTotal.coerceAtLeast(700),
             Bitmap.Config.ARGB_8888
         )
 
         try {
             val canvas = Canvas(bitmap)
-            canvas.drawColor(Color.WHITE)
 
-            var y = margem
+            val paint = Paint(
+                Paint.ANTI_ALIAS_FLAG
+            )
 
-            for (linha in linhas) {
-                paint.textSize = linha.tamanho
-                paint.color = linha.cor
-                paint.typeface = if (linha.negrito) {
-                    Typeface.DEFAULT_BOLD
-                } else {
-                    Typeface.DEFAULT
-                }
+            canvas.drawColor(FUNDO)
 
-                if (linha.texto.isNotEmpty()) {
-                    y -= paint.fontMetrics.ascent
-                    canvas.drawText(
-                        linha.texto,
-                        margem,
-                        y,
-                        paint
+            // Cabeçalho
+            paint.color = AZUL
+            canvas.drawRect(
+                0f,
+                0f,
+                LARGURA.toFloat(),
+                alturaCabecalho.toFloat(),
+                paint
+            )
+
+            var y = 45f
+
+            y = desenharTexto(
+                canvas,
+                "ESCALA • ${escala.tipo.uppercase()}",
+                MARGEM.toFloat(),
+                y,
+                larguraUtil,
+                30f,
+                Color.rgb(215, 232, 251),
+                true
+            ) + 20f
+
+            y = desenharTexto(
+                canvas,
+                escala.titulo,
+                MARGEM.toFloat(),
+                y,
+                larguraUtil,
+                48f,
+                BRANCO,
+                true
+            ) + 15f
+
+            desenharTexto(
+                canvas,
+                "${escala.dataInicial} a ${escala.dataFinal}",
+                MARGEM.toFloat(),
+                y,
+                larguraUtil,
+                30f,
+                BRANCO
+            )
+
+            // Informações gerais
+            y = alturaCabecalho + 35f
+
+            y = desenharTexto(
+                canvas,
+                "LOCAL / UNIDADE",
+                MARGEM.toFloat(),
+                y,
+                larguraUtil,
+                25f,
+                CINZA,
+                true
+            ) + 8f
+
+            y = desenharTexto(
+                canvas,
+                escala.local,
+                MARGEM.toFloat(),
+                y,
+                larguraUtil,
+                30f,
+                TEXTO
+            ) + 28f
+
+            y = desenharTexto(
+                canvas,
+                "RESPONSÁVEL",
+                MARGEM.toFloat(),
+                y,
+                larguraUtil,
+                25f,
+                CINZA,
+                true
+            ) + 8f
+
+            y = desenharTexto(
+                canvas,
+                escala.responsavel,
+                MARGEM.toFloat(),
+                y,
+                larguraUtil,
+                30f,
+                TEXTO
+            ) + 42f
+
+            y = desenharTexto(
+                canvas,
+                "PARTICIPANTES (${registros.size})",
+                MARGEM.toFloat(),
+                y,
+                larguraUtil,
+                34f,
+                AZUL,
+                true
+            ) + 24f
+
+            // Cards de participantes
+            registros.forEachIndexed { index, pessoa ->
+
+                val alturaCard = alturasCards[index].toFloat()
+
+                paint.color = BRANCO
+                canvas.drawRoundRect(
+                    MARGEM.toFloat(),
+                    y,
+                    (LARGURA - MARGEM).toFloat(),
+                    y + alturaCard,
+                    18f,
+                    18f,
+                    paint
+                )
+
+                val x = MARGEM + 24f
+                var linhaY = y + 24f
+
+                linhaY = desenharTexto(
+                    canvas,
+                    "${index + 1}. ${pessoa.nome}",
+                    x,
+                    linhaY,
+                    larguraInterna,
+                    37f,
+                    AZUL,
+                    true
+                ) + 10f
+
+                linhaY = desenharTexto(
+                    canvas,
+                    "Função: ${
+                        pessoa.funcao.ifBlank { "Não informada" }
+                    }",
+                    x,
+                    linhaY,
+                    larguraInterna,
+                    29f,
+                    TEXTO
+                ) + 10f
+
+                linhaY = desenharTexto(
+                    canvas,
+                    "${pessoa.data}  |  " +
+                            "${pessoa.inicio} - ${pessoa.fim}",
+                    x,
+                    linhaY,
+                    larguraInterna,
+                    29f,
+                    TEXTO
+                ) + 14f
+
+                if (pessoa.observacoes.isNotBlank()) {
+                    desenharTexto(
+                        canvas,
+                        "Obs.: ${pessoa.observacoes}",
+                        x,
+                        linhaY,
+                        larguraInterna,
+                        27f,
+                        CINZA
                     )
-                    y += paint.fontMetrics.descent
-                } else {
-                    y += linha.altura
                 }
+
+                y += alturaCard + ESPACO
             }
 
-            val pasta = File(context.cacheDir, "escalas")
-            if (!pasta.exists()) pasta.mkdirs()
+            // Observações gerais
+            if (escala.observacoes.isNotBlank()) {
+                y += 20f
+
+                y = desenharTexto(
+                    canvas,
+                    "OBSERVAÇÕES GERAIS",
+                    MARGEM.toFloat(),
+                    y,
+                    larguraUtil,
+                    30f,
+                    AZUL,
+                    true
+                ) + 15f
+
+                y = desenharTexto(
+                    canvas,
+                    escala.observacoes,
+                    MARGEM.toFloat(),
+                    y,
+                    larguraUtil,
+                    29f,
+                    TEXTO
+                ) + 20f
+            }
+
+            // Rodapé
+            desenharTexto(
+                canvas,
+                "Gerado pelo EscalaApp",
+                MARGEM.toFloat(),
+                (bitmap.height - 65).toFloat(),
+                larguraUtil,
+                25f,
+                CINZA
+            )
+
+            val pasta = File(
+                context.cacheDir,
+                "escalas"
+            ).apply {
+                if (!exists()) mkdirs()
+            }
 
             val arquivo = File(
                 pasta,
                 "escala_${escala.id}_${System.currentTimeMillis()}.png"
             )
 
-            arquivo.outputStream().use {
-                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) {
-                    "Falha ao gerar PNG"
+            arquivo.outputStream().use { stream ->
+                check(
+                    bitmap.compress(
+                        Bitmap.CompressFormat.PNG,
+                        100,
+                        stream
+                    )
+                ) {
+                    "Falha ao salvar a imagem."
                 }
             }
 
@@ -228,6 +437,16 @@ object GeradorImagemEscala {
 
         } finally {
             bitmap.recycle()
+        }
+    }
+
+    private fun dataOrdenavel(data: String): String {
+        val partes = data.split("/")
+
+        return if (partes.size == 3) {
+            "${partes[2]}${partes[1]}${partes[0]}"
+        } else {
+            data
         }
     }
 }
