@@ -7,9 +7,31 @@ import androidx.room.Update
 import androidx.room.Delete
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
+import androidx.room.OnConflictStrategy
 
 @Dao
 interface EscalaDao {
+
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun salvarConfiguracao(
+        configuracao: ConfiguracaoEmpresaEntity
+    )
+
+    @Query("""
+    SELECT * FROM configuracao_empresa
+    WHERE id = 1
+    LIMIT 1
+""")
+    fun observarConfiguracao(): Flow<ConfiguracaoEmpresaEntity?>
+
+    @Query("""
+    SELECT * FROM configuracao_empresa
+    WHERE id = 1
+    LIMIT 1
+""")
+    suspend fun buscarConfiguracao(): ConfiguracaoEmpresaEntity?
+
 
     @Insert
     suspend fun inserirEscala(
